@@ -1,0 +1,173 @@
+{
+  "name": "jj-colo",
+  "displayName": "jj-colo: Jujutsu for colocated repos",
+  "description": "Jujutsu (jj) source control that runs alongside the built-in Git extension instead of fighting it.",
+  "version": "0.1.0",
+  "publisher": "plttn",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/plttn/jj-colo" },
+  "engines": { "vscode": "^1.95.0" },
+  "categories": ["SCM Providers"],
+  "keywords": ["jj", "jujutsu", "scm", "git", "colocated"],
+  "activationEvents": ["workspaceContains:.jj", "onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Jujutsu (jj-colo)",
+      "properties": {
+        "jjColo.path": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "description": "Path to the jj executable. Leave empty to use `jj` from PATH."
+        },
+        "jjColo.hideGitGraph": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Hide VS Code's **Source Control Graph** (git history) in jj workspaces. In a colocated repo it shows a detached HEAD and stale rewritten commits; the **Jujutsu Log** view replaces it. The graph comes back automatically in workspaces without jj."
+        },
+        "jjColo.quickDiff": {
+          "type": "string",
+          "enum": ["auto", "always", "never"],
+          "default": "auto",
+          "enumDescriptions": [
+            "Only show jj gutter changes when the Git extension isn't already showing them for this folder.",
+            "Always show jj gutter changes (you may see two sets if Git is also active).",
+            "Never show jj gutter changes."
+          ],
+          "description": "Gutter decorations comparing files against @-."
+        },
+        "jjColo.prefillDescription": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fill the Source Control input box with the description of @."
+        },
+        "jjColo.refreshDebounceMs": {
+          "type": "number",
+          "default": 400,
+          "minimum": 50,
+          "description": "Wait this long after file changes before asking jj for status."
+        },
+        "jjColo.log.revset": {
+          "type": "string",
+          "default": "",
+          "description": "Revset shown in the Jujutsu Log view. Empty uses jj's `revsets.log` setting."
+        },
+        "jjColo.log.limit": {
+          "type": "number",
+          "default": 50,
+          "minimum": 1,
+          "description": "Maximum number of revisions in the Jujutsu Log view."
+        }
+      }
+    },
+    "views": {
+      "scm": [
+        {
+          "id": "jjColo.log",
+          "name": "Jujutsu Log",
+          "icon": "$(git-commit)",
+          "when": "jjColo.hasRepository || jjColo.restoreGitGraph"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "jjColo.log",
+        "contents": "No jj repository in this workspace. Restoring the Source Control Graph…",
+        "when": "!jjColo.hasRepository"
+      }
+    ],
+    "commands": [
+      { "command": "jjColo.refresh", "title": "Refresh", "category": "Jujutsu", "icon": "$(refresh)" },
+      { "command": "jjColo.commit", "title": "Commit (describe @ and start a new change)", "category": "Jujutsu", "icon": "$(check)" },
+      { "command": "jjColo.describe", "title": "Describe @", "category": "Jujutsu", "icon": "$(edit)" },
+      { "command": "jjColo.new", "title": "New Change", "category": "Jujutsu", "icon": "$(add)" },
+      { "command": "jjColo.squash", "title": "Squash @ into Parent", "category": "Jujutsu", "icon": "$(fold-up)" },
+      { "command": "jjColo.abandon", "title": "Abandon @", "category": "Jujutsu", "icon": "$(trash)" },
+      { "command": "jjColo.undo", "title": "Undo Last Operation", "category": "Jujutsu", "icon": "$(discard)" },
+      { "command": "jjColo.gitFetch", "title": "Git Fetch (jj git fetch)", "category": "Jujutsu", "icon": "$(cloud-download)" },
+      { "command": "jjColo.gitPush", "title": "Git Push (jj git push)", "category": "Jujutsu", "icon": "$(cloud-upload)" },
+      { "command": "jjColo.bookmarkSet", "title": "Set Bookmark…", "category": "Jujutsu", "icon": "$(bookmark)" },
+      { "command": "jjColo.openChange", "title": "Open Changes", "category": "Jujutsu", "icon": "$(compare-changes)" },
+      { "command": "jjColo.openFile", "title": "Open File", "category": "Jujutsu", "icon": "$(go-to-file)" },
+      { "command": "jjColo.restore", "title": "Discard Changes", "category": "Jujutsu", "icon": "$(discard)" },
+      { "command": "jjColo.showGitGraph", "title": "Show Source Control Graph Again", "category": "Jujutsu" },
+      { "command": "jjColo.log.edit", "title": "Edit This Change", "category": "Jujutsu", "icon": "$(edit)" },
+      { "command": "jjColo.log.new", "title": "New Change on Top", "category": "Jujutsu", "icon": "$(add)" },
+      { "command": "jjColo.log.describe", "title": "Describe…", "category": "Jujutsu" },
+      { "command": "jjColo.log.squashInto", "title": "Squash @ into This Change", "category": "Jujutsu" },
+      { "command": "jjColo.log.abandon", "title": "Abandon", "category": "Jujutsu" },
+      { "command": "jjColo.log.copyChangeId", "title": "Copy Change ID", "category": "Jujutsu" }
+    ],
+    "menus": {
+      "scm/title": [
+        { "command": "jjColo.commit", "group": "navigation@1", "when": "scmProvider == jj" },
+        { "command": "jjColo.new", "group": "navigation@2", "when": "scmProvider == jj" },
+        { "command": "jjColo.refresh", "group": "navigation@3", "when": "scmProvider == jj" },
+        { "command": "jjColo.describe", "group": "1_change@1", "when": "scmProvider == jj" },
+        { "command": "jjColo.squash", "group": "1_change@2", "when": "scmProvider == jj" },
+        { "command": "jjColo.abandon", "group": "1_change@3", "when": "scmProvider == jj" },
+        { "command": "jjColo.undo", "group": "1_change@4", "when": "scmProvider == jj" },
+        { "command": "jjColo.bookmarkSet", "group": "2_remote@1", "when": "scmProvider == jj" },
+        { "command": "jjColo.gitFetch", "group": "2_remote@2", "when": "scmProvider == jj" },
+        { "command": "jjColo.gitPush", "group": "2_remote@3", "when": "scmProvider == jj" }
+      ],
+      "scm/resourceState/context": [
+        { "command": "jjColo.openFile", "group": "inline@1", "when": "scmProvider == jj && scmResourceState != removed" },
+        { "command": "jjColo.restore", "group": "inline@2", "when": "scmProvider == jj" },
+        { "command": "jjColo.openChange", "group": "navigation@1", "when": "scmProvider == jj" },
+        { "command": "jjColo.openFile", "group": "navigation@2", "when": "scmProvider == jj && scmResourceState != removed" },
+        { "command": "jjColo.restore", "group": "1_modification", "when": "scmProvider == jj" }
+      ],
+      "view/title": [
+        { "command": "jjColo.refresh", "group": "navigation", "when": "view == jjColo.log && jjColo.hasRepository" },
+        { "command": "jjColo.gitFetch", "group": "1_remote", "when": "view == jjColo.log && jjColo.hasRepository" }
+      ],
+      "view/item/context": [
+        { "command": "jjColo.log.new", "group": "inline@1", "when": "view == jjColo.log && viewItem =~ /^jjRevision/" },
+        { "command": "jjColo.log.edit", "group": "inline@2", "when": "view == jjColo.log && viewItem =~ /^jjRevision:mutable/ && viewItem not =~ /:wc/" },
+        { "command": "jjColo.log.new", "group": "1_change@1", "when": "view == jjColo.log && viewItem =~ /^jjRevision/" },
+        { "command": "jjColo.log.edit", "group": "1_change@2", "when": "view == jjColo.log && viewItem =~ /^jjRevision:mutable/ && viewItem not =~ /:wc/" },
+        { "command": "jjColo.log.describe", "group": "1_change@3", "when": "view == jjColo.log && viewItem =~ /^jjRevision:mutable/" },
+        { "command": "jjColo.log.squashInto", "group": "1_change@4", "when": "view == jjColo.log && viewItem =~ /^jjRevision:mutable/ && viewItem not =~ /:wc/" },
+        { "command": "jjColo.bookmarkSet", "group": "2_bookmark@1", "when": "view == jjColo.log && viewItem =~ /^jjRevision/" },
+        { "command": "jjColo.log.copyChangeId", "group": "3_copy@1", "when": "view == jjColo.log && viewItem =~ /^jjRevision/" },
+        { "command": "jjColo.log.abandon", "group": "4_danger@1", "when": "view == jjColo.log && viewItem =~ /^jjRevision:mutable/" }
+      ],
+      "commandPalette": [
+        { "command": "jjColo.openChange", "when": "false" },
+        { "command": "jjColo.openFile", "when": "false" },
+        { "command": "jjColo.restore", "when": "false" },
+        { "command": "jjColo.log.edit", "when": "false" },
+        { "command": "jjColo.log.new", "when": "false" },
+        { "command": "jjColo.log.describe", "when": "false" },
+        { "command": "jjColo.log.squashInto", "when": "false" },
+        { "command": "jjColo.log.abandon", "when": "false" },
+        { "command": "jjColo.log.copyChangeId", "when": "false" },
+        { "command": "jjColo.refresh", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.commit", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.describe", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.new", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.squash", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.abandon", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.undo", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.gitFetch", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.gitPush", "when": "jjColo.hasRepository" },
+        { "command": "jjColo.bookmarkSet", "when": "jjColo.hasRepository" }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node --test \"out/test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/vscode": "~1.95.0",
+    "typescript": "^5.6.0"
+  }
+}
